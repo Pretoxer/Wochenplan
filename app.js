@@ -166,13 +166,12 @@ function renderDayView() {
     }
     content.appendChild(renderAddForm());
   } else {
-    if (sorted.length === 0) {
-      content.appendChild(renderEmptyState('Kein Plan für diesen Tag', 'Wechsle zu "Planen" um Aktivitäten hinzuzufügen.'));
-    } else {
+    if (sorted.length > 0) {
       const list = el('div', 'activity-list');
       sorted.forEach(act => list.appendChild(renderReflectCard(act)));
       content.appendChild(list);
     }
+    content.appendChild(renderAddReflectForm());
   }
 
   return content;
@@ -336,6 +335,77 @@ function renderAddForm() {
   };
 
   card.append(h3, row1, row2, addBtn);
+  wrap.append(card);
+  return wrap;
+}
+
+function renderAddReflectForm() {
+  const wrap = el('div', 'add-form');
+  const card = el('div', 'add-card');
+  const h3 = el('h3');
+  h3.textContent = 'Was hast du gemacht?';
+
+  const row1 = el('div', 'form-row');
+  const titleInput = el('input', 'form-input');
+  titleInput.type = 'text';
+  titleInput.placeholder = 'Aktivität';
+  titleInput.id = 'add-reflect-title';
+  row1.append(titleInput);
+
+  const row2 = el('div', 'form-row');
+  const startInput = el('input', 'form-input time-input');
+  startInput.type = 'time';
+  startInput.id = 'add-reflect-start';
+  const bis = el('span');
+  bis.textContent = '–';
+  bis.style.cssText = 'display:flex;align-items:center;color:var(--text-light);font-size:16px;';
+  const endInput = el('input', 'form-input time-input');
+  endInput.type = 'time';
+  endInput.id = 'add-reflect-end';
+  row2.append(startInput, bis, endInput);
+
+  let selectedMood = null;
+  const moodLabel = el('h3');
+  moodLabel.textContent = 'Stimmung';
+  moodLabel.style.marginTop = '8px';
+  const moodRow = el('div', 'mood-selector');
+  moodRow.style.marginBottom = '12px';
+  MOODS.forEach(m => {
+    const btn = el('button', 'mood-btn');
+    btn.textContent = m;
+    btn.dataset.mood = m;
+    btn.onclick = (e) => {
+      e.preventDefault();
+      selectedMood = selectedMood === m ? null : m;
+      moodRow.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+      if (selectedMood) btn.classList.add('selected');
+    };
+    moodRow.append(btn);
+  });
+
+  const addBtn = el('button', 'btn-add');
+  addBtn.textContent = 'Eintragen';
+  addBtn.onclick = () => {
+    const title = document.getElementById('add-reflect-title').value.trim();
+    if (!title) return;
+    const start = document.getElementById('add-reflect-start').value;
+    const end = document.getElementById('add-reflect-end').value;
+
+    const plan = getPlan(state.selectedDate);
+    plan.activities.push({
+      id: uid(),
+      title,
+      startTime: start || null,
+      endTime: end || null,
+      status: 'done',
+      alternative: '',
+      mood: selectedMood
+    });
+    savePlans();
+    render();
+  };
+
+  card.append(h3, row1, row2, moodLabel, moodRow, addBtn);
   wrap.append(card);
   return wrap;
 }
