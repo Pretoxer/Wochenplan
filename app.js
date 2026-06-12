@@ -662,18 +662,23 @@ function renderBottomNav() {
 }
 
 // --- Export ---
-function openPrintWindow(title, bodyHTML) {
-  const w = window.open('', '_blank');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+function printContent(title, bodyHTML) {
+  let iframe = document.getElementById('print-frame');
+  if (iframe) iframe.remove();
+  iframe = document.createElement('iframe');
+  iframe.id = 'print-frame';
+  iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:none;';
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument;
+  doc.open();
+  doc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
 <title>${title}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; background: #F5F0E8; color: #2C2C2C; padding: 28px; max-width: 700px; margin: 0 auto; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; color: #2C2C2C; padding: 28px; max-width: 700px; margin: 0 auto; }
   h1 { color: #2D4A3E; font-size: 26px; margin-bottom: 4px; }
   .subtitle { color: #8A8578; font-size: 14px; margin-bottom: 24px; }
-  .day-card { background: #FFFDF8; border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; border: 1px solid #E5DFD3; }
-  .day-card.today { border: 2px solid #2D4A3E; }
+  .day-card { padding: 14px 16px; margin-bottom: 8px; border: 1px solid #E5DFD3; border-radius: 4px; }
   .day-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
   .day-name { font-weight: 700; font-size: 15px; }
   .day-date { font-size: 12px; color: #8A8578; }
@@ -684,21 +689,19 @@ function openPrintWindow(title, bodyHTML) {
   .activity .mood { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
   .empty { font-size: 12px; color: #C9BFA4; }
   .section-title { color: #2D4A3E; font-size: 20px; font-weight: 700; margin: 28px 0 12px; }
-  .proud-item { background: #FFFDF8; border-radius: 12px; padding: 12px 16px; margin-bottom: 6px; border-left: 3px solid #A8C5B8; font-size: 14px; }
+  .proud-item { padding: 10px 16px; margin-bottom: 4px; border-left: 3px solid #A8C5B8; font-size: 14px; }
   .proud-date { color: #8A8578; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 12px; margin-bottom: 4px; }
   .watermark { text-align: right; color: #C9BFA4; font-size: 11px; margin-top: 24px; }
-  .share-hint { text-align: center; padding: 20px; color: #8A8578; font-size: 13px; }
-  .share-hint button { display: block; margin: 12px auto 0; padding: 12px 32px; border: none; border-radius: 10px; background: #2D4A3E; color: white; font-size: 15px; font-weight: 600; cursor: pointer; }
-  @media print { .share-hint { display: none; } body { background: white; } .day-card, .proud-item { break-inside: avoid; } }
+  .day-card, .proud-item { break-inside: avoid; }
 </style></head><body>
 ${bodyHTML}
 <div class="watermark">Wochenplan</div>
-<div class="share-hint">
-  <button onclick="window.print()">Als PDF teilen</button>
-  Auf dem iPhone: Teilen → Als PDF sichern
-</div>
 </body></html>`);
-  w.document.close();
+  doc.close();
+  setTimeout(() => {
+    iframe.contentWindow.print();
+    setTimeout(() => iframe.remove(), 1000);
+  }, 300);
 }
 
 function exportWeekPDF() {
@@ -757,7 +760,7 @@ function exportWeekPDF() {
     });
   }
 
-  openPrintWindow('Wochenrückblick', html);
+  printContent('Wochenrückblick', html);
 }
 
 function exportProudPDF() {
@@ -777,7 +780,7 @@ function exportProudPDF() {
     html += `<div class="proud-item">★ ${item.text}</div>`;
   });
 
-  openPrintWindow('Stolz-Liste', html);
+  printContent('Stolz-Liste', html);
 }
 
 // --- Helpers ---
