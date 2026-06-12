@@ -296,6 +296,9 @@ function renderReflectCard(activity) {
     const alt = el('textarea', 'alt-input');
     alt.placeholder = 'Was hast du stattdessen gemacht?';
     alt.rows = 2;
+    alt.autocorrect = 'on';
+    alt.autocapitalize = 'sentences';
+    alt.spellcheck = true;
     alt.value = activity.alternative || '';
     alt.oninput = (e) => {
       activity.alternative = e.target.value;
@@ -334,6 +337,9 @@ function renderAddForm() {
   const row1 = el('div', 'form-row');
   const titleInput = el('input', 'form-input');
   titleInput.type = 'text';
+  titleInput.autocorrect = 'on';
+  titleInput.autocapitalize = 'sentences';
+  titleInput.spellcheck = true;
   titleInput.placeholder = 'Was machst du?';
   titleInput.id = 'add-title';
 
@@ -383,6 +389,9 @@ function renderAddReflectForm() {
   const row1 = el('div', 'form-row');
   const titleInput = el('input', 'form-input');
   titleInput.type = 'text';
+  titleInput.autocorrect = 'on';
+  titleInput.autocapitalize = 'sentences';
+  titleInput.spellcheck = true;
   titleInput.placeholder = 'Aktivität';
   titleInput.id = 'add-reflect-title';
   row1.append(titleInput);
@@ -567,6 +576,9 @@ function renderProudView() {
   const row = el('div', 'form-row');
   const input = el('input', 'form-input');
   input.type = 'text';
+  input.autocorrect = 'on';
+  input.autocapitalize = 'sentences';
+  input.spellcheck = true;
   input.placeholder = 'Ich bin stolz auf...';
   input.id = 'proud-input';
   row.append(input);
