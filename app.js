@@ -20,11 +20,11 @@ const DB = {
 
 const MOODS = ['--', '-', '-/+', '+', '++'];
 const MOOD_COLORS = {
-  '--': '#C4756E',
-  '-': '#D4A07A',
-  '-/+': '#C9BFA4',
-  '+': '#A8C5B8',
-  '++': '#7BAF9E'
+  '--': '#D1403C',
+  '-': '#E06B52',
+  '-/+': '#E2B735',
+  '+': '#5AAF6B',
+  '++': '#2E8B4A'
 };
 const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
 const WEEKDAYS_SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];

@@ -8,11 +8,11 @@
   --text-light: #8A8578;
   --border: #E5DFD3;
   --accent: #A8C5B8;
-  --mood-vbad: #C4756E;
-  --mood-bad: #D4A07A;
-  --mood-neutral: #C9BFA4;
-  --mood-good: #A8C5B8;
-  --mood-vgood: #7BAF9E;
+  --mood-vbad: #D1403C;
+  --mood-bad: #E06B52;
+  --mood-neutral: #E2B735;
+  --mood-good: #5AAF6B;
+  --mood-vgood: #2E8B4A;
   --radius: 14px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -601,4 +601,6 @@ input, textarea {
   #print-content { padding: 0; }
   .ex-day, .ex-proud { break-inside: avoid; }
   body { background: white; padding: 0; }
+  @page { margin: 1.5cm; }
+  title { display: none; }
 }
