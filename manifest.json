@@ -2,7 +2,7 @@
   "name": "Wochenplan",
   "short_name": "Wochenplan",
   "description": "Tagesplanung und Reflexion",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#F5F0E8",
   "theme_color": "#2D4A3E",
