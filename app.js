@@ -56,6 +56,25 @@ function isTomorrow(d) {
   return dateKey(d) === dateKey(tomorrow);
 }
 
+function createTimeSelect(id) {
+  const select = el('select', 'form-input time-input');
+  select.id = id;
+  const empty = el('option');
+  empty.value = '';
+  empty.textContent = '—';
+  select.append(empty);
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      const opt = el('option');
+      const val = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      opt.value = val;
+      opt.textContent = val;
+      select.append(opt);
+    }
+  }
+  return select;
+}
+
 function formatDate(d) {
   const dt = new Date(d);
   const day = dt.getDate();
@@ -298,20 +317,11 @@ function renderAddForm() {
   row1.append(titleInput);
 
   const row2 = el('div', 'form-row');
-  const startInput = el('input', 'form-input time-input');
-  startInput.type = 'time';
-  startInput.step = '900';
-  startInput.id = 'add-start';
-
+  const startInput = createTimeSelect('add-start');
   const bis = el('span');
   bis.textContent = '–';
   bis.style.cssText = 'display:flex;align-items:center;color:var(--text-light);font-size:16px;';
-
-  const endInput = el('input', 'form-input time-input');
-  endInput.type = 'time';
-  endInput.step = '900';
-  endInput.id = 'add-end';
-
+  const endInput = createTimeSelect('add-end');
   row2.append(startInput, bis, endInput);
 
   const addBtn = el('button', 'btn-add');
@@ -355,17 +365,11 @@ function renderAddReflectForm() {
   row1.append(titleInput);
 
   const row2 = el('div', 'form-row');
-  const startInput = el('input', 'form-input time-input');
-  startInput.type = 'time';
-  startInput.step = '900';
-  startInput.id = 'add-reflect-start';
+  const startInput = createTimeSelect('add-reflect-start');
   const bis = el('span');
   bis.textContent = '–';
   bis.style.cssText = 'display:flex;align-items:center;color:var(--text-light);font-size:16px;';
-  const endInput = el('input', 'form-input time-input');
-  endInput.type = 'time';
-  endInput.step = '900';
-  endInput.id = 'add-reflect-end';
+  const endInput = createTimeSelect('add-reflect-end');
   row2.append(startInput, bis, endInput);
 
   let selectedMood = null;
