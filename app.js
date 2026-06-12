@@ -552,12 +552,38 @@ function renderWeekView() {
   };
   weekNav.append(prevW, weekLabel, nextW);
 
-  // Export button
+  // Export
   const exportSection = el('div', 'export-section');
+
+  const dateRow = el('div', 'form-row');
+  dateRow.style.marginBottom = '10px';
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const fromInput = el('input', 'form-input');
+  fromInput.type = 'date';
+  fromInput.id = 'export-from';
+  fromInput.value = dateKey(weekAgo);
+  fromInput.style.flex = '1';
+  const bis2 = el('span');
+  bis2.textContent = '–';
+  bis2.style.cssText = 'display:flex;align-items:center;color:var(--text-light);font-size:16px;padding:0 4px;';
+  const toInput = el('input', 'form-input');
+  toInput.type = 'date';
+  toInput.id = 'export-to';
+  toInput.value = dateKey(yesterday);
+  toInput.style.flex = '1';
+  dateRow.append(fromInput, bis2, toInput);
+
   const exportBtn = el('button', 'export-btn');
-  exportBtn.textContent = 'Wochenrückblick als PDF teilen';
-  exportBtn.onclick = () => exportWeekPDF();
-  exportSection.append(exportBtn);
+  exportBtn.textContent = 'Rückblick als PDF teilen';
+  exportBtn.onclick = () => {
+    const from = document.getElementById('export-from').value;
+    const to = document.getElementById('export-to').value;
+    if (from && to) exportWeekPDF(from, to);
+  };
+  exportSection.append(dateRow, exportBtn);
 
   const container = el('div');
   container.append(weekNav, overview, exportSection);
@@ -716,19 +742,21 @@ ${bodyHTML}
   }, 300);
 }
 
-function exportWeekPDF() {
-  const today = new Date();
-  const days = [];
-  for (let i = 1; i <= 7; i++) {
-    const day = new Date(today);
-    day.setDate(day.getDate() - i);
-    days.push(day);
-  }
-  const newest = days[0];
-  const oldest = days[6];
+function exportWeekPDF(fromStr, toStr) {
+  const [fy, fm, fd] = fromStr.split('-');
+  const [ty, tm, td] = toStr.split('-');
+  const from = new Date(fy, fm - 1, fd);
+  const to = new Date(ty, tm - 1, td);
 
-  let html = `<h1>Wochenrückblick</h1>
-<div class="subtitle">${formatDateShort(oldest)} – ${formatDateShort(newest)}</div>`;
+  const days = [];
+  const d = new Date(from);
+  while (d <= to) {
+    days.push(new Date(d));
+    d.setDate(d.getDate() + 1);
+  }
+
+  let html = `<h1>Rückblick</h1>
+<div class="subtitle">${formatDateShort(from)} – ${formatDateShort(to)}</div>`;
 
   days.forEach(day => {
     const plan = getPlan(day);
@@ -753,9 +781,9 @@ function exportWeekPDF() {
     html += '</div>';
   });
 
-  // Stolz-Liste der letzten 7 Tage
-  const weekStart = dateKey(oldest);
-  const weekEnd = dateKey(newest);
+  // Stolz-Liste im Zeitraum
+  const weekStart = fromStr;
+  const weekEnd = toStr;
   const weekProud = state.proudList.filter(p => p.date >= weekStart && p.date <= weekEnd);
 
   if (weekProud.length > 0) {
