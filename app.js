@@ -300,6 +300,7 @@ function renderAddForm() {
   const row2 = el('div', 'form-row');
   const startInput = el('input', 'form-input time-input');
   startInput.type = 'time';
+  startInput.step = '900';
   startInput.id = 'add-start';
 
   const bis = el('span');
@@ -308,6 +309,7 @@ function renderAddForm() {
 
   const endInput = el('input', 'form-input time-input');
   endInput.type = 'time';
+  endInput.step = '900';
   endInput.id = 'add-end';
 
   row2.append(startInput, bis, endInput);
@@ -355,12 +357,14 @@ function renderAddReflectForm() {
   const row2 = el('div', 'form-row');
   const startInput = el('input', 'form-input time-input');
   startInput.type = 'time';
+  startInput.step = '900';
   startInput.id = 'add-reflect-start';
   const bis = el('span');
   bis.textContent = '–';
   bis.style.cssText = 'display:flex;align-items:center;color:var(--text-light);font-size:16px;';
   const endInput = el('input', 'form-input time-input');
   endInput.type = 'time';
+  endInput.step = '900';
   endInput.id = 'add-reflect-end';
   row2.append(startInput, bis, endInput);
 
