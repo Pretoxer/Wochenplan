@@ -340,7 +340,7 @@ function renderAddForm() {
   row1.append(titleInput);
 
   const row2 = el('div', 'form-row');
-  const startInput = createTimeInput('add-start', nearestQuarter());
+  const startInput = createTimeInput('add-start');
   const bis = el('span');
   bis.textContent = '–';
   bis.style.cssText = 'display:flex;align-items:center;color:var(--text-light);font-size:16px;';
@@ -388,7 +388,7 @@ function renderAddReflectForm() {
   row1.append(titleInput);
 
   const row2 = el('div', 'form-row');
-  const startInput = createTimeInput('add-reflect-start', nearestQuarter());
+  const startInput = createTimeInput('add-reflect-start');
   const bis = el('span');
   bis.textContent = '–';
   bis.style.cssText = 'display:flex;align-items:center;color:var(--text-light);font-size:16px;';
@@ -546,8 +546,8 @@ function renderWeekView() {
   // Export button
   const exportSection = el('div', 'export-section');
   const exportBtn = el('button', 'export-btn');
-  exportBtn.textContent = 'Woche als Bild teilen';
-  exportBtn.onclick = () => exportWeek(monday);
+  exportBtn.textContent = 'Wochenrückblick als PDF teilen';
+  exportBtn.onclick = () => exportWeekPDF();
   exportSection.append(exportBtn);
 
   const container = el('div');
@@ -570,16 +570,29 @@ function renderProudView() {
   input.placeholder = 'Ich bin stolz auf...';
   input.id = 'proud-input';
   row.append(input);
+  const row2 = el('div', 'form-row');
+  const dateInput = el('input', 'form-input');
+  dateInput.type = 'date';
+  dateInput.id = 'proud-date';
+  dateInput.style.flex = '1';
+  row2.append(dateInput);
+  const dateHint = el('span');
+  dateHint.textContent = 'Leer = heute';
+  dateHint.style.cssText = 'display:flex;align-items:center;font-size:12px;color:var(--text-light);white-space:nowrap;';
+  row2.append(dateHint);
   const addBtn = el('button', 'btn-add');
   addBtn.textContent = 'Eintragen';
   addBtn.onclick = () => {
     const text = document.getElementById('proud-input').value.trim();
     if (!text) return;
-    state.proudList.unshift({ id: uid(), text, date: dateKey(new Date()) });
+    const dateVal = document.getElementById('proud-date').value;
+    const date = dateVal || dateKey(new Date());
+    state.proudList.push({ id: uid(), text, date });
+    state.proudList.sort((a, b) => b.date.localeCompare(a.date));
     DB.saveProud(state.proudList);
     render();
   };
-  addCard.append(h3, row, addBtn);
+  addCard.append(h3, row, row2, addBtn);
   addSection.append(addCard);
   content.append(addSection);
 
@@ -614,6 +627,13 @@ function renderProudView() {
       list.append(card);
     });
     content.append(list);
+
+    const exportSection = el('div', 'export-section');
+    const exportBtn = el('button', 'export-btn');
+    exportBtn.textContent = 'Stolz-Liste als PDF teilen';
+    exportBtn.onclick = () => exportProudPDF();
+    exportSection.append(exportBtn);
+    content.append(exportSection);
   }
 
   return content;
@@ -642,134 +662,122 @@ function renderBottomNav() {
 }
 
 // --- Export ---
-async function exportWeek(monday) {
-  const canvas = document.createElement('canvas');
-  const w = 800;
-  const rowH = 60;
-  const headerH = 80;
-  const padding = 24;
-  const end = new Date(monday);
-  end.setDate(end.getDate() + 6);
-
-  let maxActs = 0;
-  const days = [];
-  for (let i = 0; i < 7; i++) {
-    const day = new Date(monday);
-    day.setDate(day.getDate() + i);
-    const plan = getPlan(day);
-    const sorted = [...plan.activities].sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
-    days.push({ day, activities: sorted });
-    maxActs = Math.max(maxActs, sorted.length);
-  }
-
-  const dayBlockH = Math.max(rowH, 36 + maxActs * 26 + 10);
-  const h = headerH + padding + days.length * dayBlockH + padding * 2;
-
-  canvas.width = w * 2;
-  canvas.height = h * 2;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(2, 2);
-
-  // Background
-  ctx.fillStyle = '#F5F0E8';
-  ctx.fillRect(0, 0, w, h);
-
-  // Title
-  ctx.fillStyle = '#2D4A3E';
-  ctx.font = 'bold 24px -apple-system, sans-serif';
-  ctx.fillText('Wochenplan', padding, padding + 28);
-
-  ctx.fillStyle = '#8A8578';
-  ctx.font = '14px -apple-system, sans-serif';
-  ctx.fillText(`${formatDateShort(monday)} – ${formatDateShort(end)}`, padding, padding + 50);
-
-  let y = headerH + padding;
-
-  days.forEach(({ day, activities }) => {
-    // Day card background
-    ctx.fillStyle = isToday(day) ? '#FFFDF8' : '#FFFDF8';
-    roundRect(ctx, padding, y, w - padding * 2, dayBlockH - 8, 10);
-    ctx.fill();
-
-    if (isToday(day)) {
-      ctx.strokeStyle = '#2D4A3E';
-      ctx.lineWidth = 2;
-      roundRect(ctx, padding, y, w - padding * 2, dayBlockH - 8, 10);
-      ctx.stroke();
-    }
-
-    // Day name
-    ctx.fillStyle = '#2C2C2C';
-    ctx.font = 'bold 15px -apple-system, sans-serif';
-    ctx.fillText(WEEKDAYS_SHORT[day.getDay()], padding + 14, y + 24);
-
-    ctx.fillStyle = '#8A8578';
-    ctx.font = '12px -apple-system, sans-serif';
-    ctx.fillText(`${day.getDate()}.${day.getMonth() + 1}.`, padding + 44, y + 24);
-
-    // Activities
-    let ax = padding + 90;
-    let ay = y + 12;
-    activities.forEach(act => {
-      ctx.font = '12px -apple-system, sans-serif';
-      ctx.fillStyle = '#8A8578';
-      const timeStr = act.startTime || '';
-      ctx.fillText(timeStr, ax, ay + 14);
-
-      ctx.fillStyle = '#2C2C2C';
-      ctx.font = '13px -apple-system, sans-serif';
-      let displayTitle = act.title;
-      if (act.status === 'replaced' && act.alternative) {
-        displayTitle = `${act.title} → ${act.alternative}`;
-      }
-      ctx.fillText(displayTitle, ax + 50, ay + 14);
-
-      if (act.mood) {
-        ctx.fillStyle = MOOD_COLORS[act.mood];
-        ctx.beginPath();
-        ctx.arc(w - padding - 24, ay + 10, 6, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      if (act.status === 'done') {
-        ctx.strokeStyle = '#8A8578';
-        ctx.lineWidth = 1;
-        const tw = ctx.measureText(displayTitle).width;
-        ctx.beginPath();
-        ctx.moveTo(ax + 50, ay + 11);
-        ctx.lineTo(ax + 50 + tw, ay + 11);
-        ctx.stroke();
-      }
-
-      ay += 26;
-    });
-
-    y += dayBlockH;
-  });
-
-  // Watermark
-  ctx.fillStyle = '#C9BFA4';
-  ctx.font = '11px -apple-system, sans-serif';
-  ctx.fillText('Wochenplan', w - padding - 75, h - padding);
-
-  canvas.toBlob(blob => {
-    const url = URL.createObjectURL(blob);
-    if (navigator.share) {
-      const file = new File([blob], 'wochenplan.png', { type: 'image/png' });
-      navigator.share({ files: [file], title: 'Wochenplan' }).catch(() => {
-        downloadBlob(url);
-      });
-    } else {
-      downloadBlob(url);
-    }
-  }, 'image/png');
+function openPrintWindow(title, bodyHTML) {
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; background: #F5F0E8; color: #2C2C2C; padding: 28px; max-width: 700px; margin: 0 auto; }
+  h1 { color: #2D4A3E; font-size: 26px; margin-bottom: 4px; }
+  .subtitle { color: #8A8578; font-size: 14px; margin-bottom: 24px; }
+  .day-card { background: #FFFDF8; border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; border: 1px solid #E5DFD3; }
+  .day-card.today { border: 2px solid #2D4A3E; }
+  .day-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .day-name { font-weight: 700; font-size: 15px; }
+  .day-date { font-size: 12px; color: #8A8578; }
+  .activity { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 3px 0; }
+  .activity .time { color: #8A8578; font-weight: 500; min-width: 42px; }
+  .activity .title { flex: 1; }
+  .activity .done { text-decoration: line-through; color: #8A8578; }
+  .activity .mood { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .empty { font-size: 12px; color: #C9BFA4; }
+  .section-title { color: #2D4A3E; font-size: 20px; font-weight: 700; margin: 28px 0 12px; }
+  .proud-item { background: #FFFDF8; border-radius: 12px; padding: 12px 16px; margin-bottom: 6px; border-left: 3px solid #A8C5B8; font-size: 14px; }
+  .proud-date { color: #8A8578; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 12px; margin-bottom: 4px; }
+  .watermark { text-align: right; color: #C9BFA4; font-size: 11px; margin-top: 24px; }
+  .share-hint { text-align: center; padding: 20px; color: #8A8578; font-size: 13px; }
+  .share-hint button { display: block; margin: 12px auto 0; padding: 12px 32px; border: none; border-radius: 10px; background: #2D4A3E; color: white; font-size: 15px; font-weight: 600; cursor: pointer; }
+  @media print { .share-hint { display: none; } body { background: white; } .day-card, .proud-item { break-inside: avoid; } }
+</style></head><body>
+${bodyHTML}
+<div class="watermark">Wochenplan</div>
+<div class="share-hint">
+  <button onclick="window.print()">Als PDF teilen</button>
+  Auf dem iPhone: Teilen → Als PDF sichern
+</div>
+</body></html>`);
+  w.document.close();
 }
 
-function downloadBlob(url) {
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'wochenplan.png';
-  a.click();
+function exportWeekPDF() {
+  const today = new Date();
+  const days = [];
+  for (let i = 1; i <= 7; i++) {
+    const day = new Date(today);
+    day.setDate(day.getDate() - i);
+    days.push(day);
+  }
+  const newest = days[0];
+  const oldest = days[6];
+
+  let html = `<h1>Wochenrückblick</h1>
+<div class="subtitle">${formatDateShort(oldest)} – ${formatDateShort(newest)}</div>`;
+
+  days.forEach(day => {
+    const plan = getPlan(day);
+    const sorted = [...plan.activities].sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+
+    html += `<div class="day-card">
+<div class="day-header"><span class="day-name">${WEEKDAYS_SHORT[day.getDay()]}</span><span class="day-date">${day.getDate()}.${day.getMonth() + 1}.</span></div>`;
+
+    if (sorted.length === 0) {
+      html += '<div class="empty">—</div>';
+    } else {
+      sorted.forEach(act => {
+        let title = act.title;
+        if (act.status === 'replaced' && act.alternative) {
+          title = `${act.title} → ${act.alternative}`;
+        }
+        const titleClass = act.status === 'done' ? ' done' : '';
+        const moodDot = act.mood ? `<span class="mood" style="background:${MOOD_COLORS[act.mood]}"></span>` : '';
+        html += `<div class="activity"><span class="time">${act.startTime || ''}</span><span class="title${titleClass}">${title}</span>${moodDot}</div>`;
+      });
+    }
+    html += '</div>';
+  });
+
+  // Stolz-Liste der letzten 7 Tage
+  const weekStart = dateKey(oldest);
+  const weekEnd = dateKey(newest);
+  const weekProud = state.proudList.filter(p => p.date >= weekStart && p.date <= weekEnd);
+
+  if (weekProud.length > 0) {
+    html += '<div class="section-title">Worauf ich stolz bin</div>';
+    let lastDate = null;
+    weekProud.forEach(item => {
+      if (item.date !== lastDate) {
+        lastDate = item.date;
+        const [y, m, d] = item.date.split('-');
+        const dt = new Date(y, m - 1, d);
+        html += `<div class="proud-date">${formatDate(dt)}</div>`;
+      }
+      html += `<div class="proud-item">★ ${item.text}</div>`;
+    });
+  }
+
+  openPrintWindow('Wochenrückblick', html);
+}
+
+function exportProudPDF() {
+  if (state.proudList.length === 0) return;
+
+  let html = `<h1>Worauf ich stolz bin</h1>
+<div class="subtitle">${state.proudList.length} Einträge</div>`;
+
+  let lastDate = null;
+  state.proudList.forEach(item => {
+    if (item.date !== lastDate) {
+      lastDate = item.date;
+      const [y, m, d] = item.date.split('-');
+      const dt = new Date(y, m - 1, d);
+      html += `<div class="proud-date">${formatDate(dt)}</div>`;
+    }
+    html += `<div class="proud-item">★ ${item.text}</div>`;
+  });
+
+  openPrintWindow('Stolz-Liste', html);
 }
 
 // --- Helpers ---
