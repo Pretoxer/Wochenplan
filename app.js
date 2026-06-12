@@ -557,10 +557,9 @@ function renderWeekView() {
 
   const dateRow = el('div', 'form-row');
   dateRow.style.marginBottom = '10px';
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
+  const today2 = new Date();
   const weekAgo = new Date();
-  weekAgo.setDate(weekAgo.getDate() - 7);
+  weekAgo.setDate(weekAgo.getDate() - 6);
   const fromInput = el('input', 'form-input');
   fromInput.type = 'date';
   fromInput.id = 'export-from';
@@ -572,7 +571,7 @@ function renderWeekView() {
   const toInput = el('input', 'form-input');
   toInput.type = 'date';
   toInput.id = 'export-to';
-  toInput.value = dateKey(yesterday);
+  toInput.value = dateKey(today2);
   toInput.style.flex = '1';
   dateRow.append(fromInput, bis2, toInput);
 
@@ -700,26 +699,24 @@ function renderBottomNav() {
 }
 
 // --- Export ---
-function printContent(title, bodyHTML) {
+function showExportPreview(bodyHTML) {
+  const existing = document.getElementById('print-overlay');
+  if (existing) existing.remove();
+
   const overlay = el('div');
   overlay.id = 'print-overlay';
-  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:#F5F0E8;overflow-y:auto;-webkit-overflow-scrolling:touch;';
 
-  const inner = el('div');
-  inner.style.cssText = 'max-width:700px;margin:0 auto;padding:20px 20px 120px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#2C2C2C;';
-
-  // Toolbar
   const toolbar = el('div');
-  toolbar.style.cssText = 'display:flex;gap:10px;margin-bottom:20px;position:sticky;top:0;background:#F5F0E8;padding:10px 0;z-index:1;';
+  toolbar.id = 'print-toolbar';
 
-  const backBtn = el('button', 'btn-add');
+  const backBtn = el('button');
   backBtn.textContent = 'Zurück';
-  backBtn.style.cssText = 'flex:1;padding:12px;border:none;border-radius:10px;background:var(--border);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;';
+  backBtn.className = 'print-back-btn';
   backBtn.onclick = () => overlay.remove();
 
-  const printBtn = el('button', 'btn-add');
+  const printBtn = el('button');
   printBtn.textContent = 'Als PDF teilen';
-  printBtn.style.flex = '1';
+  printBtn.className = 'print-pdf-btn';
   printBtn.onclick = () => {
     toolbar.style.display = 'none';
     window.print();
@@ -728,30 +725,11 @@ function printContent(title, bodyHTML) {
 
   toolbar.append(backBtn, printBtn);
 
-  inner.innerHTML = `
-    <style>
-      @media print { #print-overlay { position:static!important; } #app, .bottom-nav { display:none!important; } }
-      .p-h1 { color: #2D4A3E; font-size: 26px; font-weight:700; margin-bottom: 4px; }
-      .p-subtitle { color: #8A8578; font-size: 14px; margin-bottom: 24px; }
-      .p-day { padding: 14px 16px; margin-bottom: 8px; border: 1px solid #E5DFD3; border-radius: 10px; background:#FFFDF8; break-inside:avoid; }
-      .p-day-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
-      .p-day-name { font-weight: 700; font-size: 15px; }
-      .p-day-date { font-size: 12px; color: #8A8578; }
-      .p-act { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 3px 0; }
-      .p-act .time { color: #8A8578; font-weight: 500; min-width: 42px; }
-      .p-act .title { flex: 1; }
-      .p-act .done { text-decoration: line-through; color: #8A8578; }
-      .p-mood { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-      .p-empty { font-size: 12px; color: #C9BFA4; }
-      .p-section { color: #2D4A3E; font-size: 20px; font-weight: 700; margin: 28px 0 12px; }
-      .p-proud { padding: 10px 16px; margin-bottom: 4px; border-left: 3px solid #A8C5B8; font-size: 14px; background:#FFFDF8; border-radius:6px; break-inside:avoid; }
-      .p-proud-date { color: #8A8578; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 12px; margin-bottom: 4px; }
-      .p-wm { text-align: right; color: #C9BFA4; font-size: 11px; margin-top: 24px; }
-    </style>
-    ${bodyHTML}
-    <div class="p-wm">Wochenplan</div>`;
+  const content = el('div');
+  content.id = 'print-content';
+  content.innerHTML = bodyHTML;
 
-  overlay.append(toolbar, inner);
+  overlay.append(toolbar, content);
   document.body.appendChild(overlay);
 }
 
@@ -768,59 +746,54 @@ function exportWeekPDF(fromStr, toStr) {
     d.setDate(d.getDate() + 1);
   }
 
-  let html = `<div class="p-h1">Rückblick</div>
-<div class="p-subtitle">${formatDateShort(from)} – ${formatDateShort(to)}</div>`;
+  let html = `<h1 class="ex-title">Rückblick</h1>
+<p class="ex-subtitle">${formatDateShort(from)} – ${formatDateShort(to)}</p>`;
 
   days.forEach(day => {
     const plan = getPlan(day);
     const sorted = [...plan.activities].sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
 
-    html += `<div class="p-day">
-<div class="p-day-header"><span class="p-day-name">${WEEKDAYS_SHORT[day.getDay()]}</span><span class="p-day-date">${day.getDate()}.${day.getMonth() + 1}.</span></div>`;
+    html += `<div class="ex-day"><div class="ex-day-head"><strong>${WEEKDAYS_SHORT[day.getDay()]}</strong><span class="ex-muted">${day.getDate()}.${day.getMonth() + 1}.</span></div>`;
 
     if (sorted.length === 0) {
-      html += '<div class="p-empty">—</div>';
+      html += '<div class="ex-muted" style="font-size:12px">—</div>';
     } else {
       sorted.forEach(act => {
         let title = act.title;
         if (act.status === 'replaced' && act.alternative) {
           title = `${act.title} → ${act.alternative}`;
         }
-        const titleClass = act.status === 'done' ? ' done' : '';
-        const moodDot = act.mood ? `<span class="p-mood" style="background:${MOOD_COLORS[act.mood]}"></span>` : '';
-        html += `<div class="p-act"><span class="time">${act.startTime || ''}</span><span class="title${titleClass}">${title}</span>${moodDot}</div>`;
+        const cls = act.status === 'done' ? ' class="ex-done"' : '';
+        const mood = act.mood ? `<span class="ex-mood" style="background:${MOOD_COLORS[act.mood]}"></span>` : '';
+        html += `<div class="ex-act"><span class="ex-time">${act.startTime || ''}</span><span${cls}>${title}</span>${mood}</div>`;
       });
     }
     html += '</div>';
   });
 
-  // Stolz-Liste im Zeitraum
-  const weekStart = fromStr;
-  const weekEnd = toStr;
-  const weekProud = state.proudList.filter(p => p.date >= weekStart && p.date <= weekEnd);
-
+  const weekProud = state.proudList.filter(p => p.date >= fromStr && p.date <= toStr);
   if (weekProud.length > 0) {
-    html += '<div class="p-section">Worauf ich stolz bin</div>';
+    html += '<h2 class="ex-section">Worauf ich stolz bin</h2>';
     let lastDate = null;
     weekProud.forEach(item => {
       if (item.date !== lastDate) {
         lastDate = item.date;
         const [y, m, d] = item.date.split('-');
         const dt = new Date(y, m - 1, d);
-        html += `<div class="p-proud-date">${formatDate(dt)}</div>`;
+        html += `<p class="ex-proud-date">${formatDate(dt)}</p>`;
       }
-      html += `<div class="p-proud">★ ${item.text}</div>`;
+      html += `<div class="ex-proud">★ ${item.text}</div>`;
     });
   }
 
-  printContent('Wochenrückblick', html);
+  showExportPreview(html);
 }
 
 function exportProudPDF() {
   if (state.proudList.length === 0) return;
 
-  let html = `<div class="p-h1">Worauf ich stolz bin</div>
-<div class="p-subtitle">${state.proudList.length} Einträge</div>`;
+  let html = `<h1 class="ex-title">Worauf ich stolz bin</h1>
+<p class="ex-subtitle">${state.proudList.length} Einträge</p>`;
 
   let lastDate = null;
   state.proudList.forEach(item => {
@@ -828,12 +801,12 @@ function exportProudPDF() {
       lastDate = item.date;
       const [y, m, d] = item.date.split('-');
       const dt = new Date(y, m - 1, d);
-      html += `<div class="p-proud-date">${formatDate(dt)}</div>`;
+      html += `<p class="ex-proud-date">${formatDate(dt)}</p>`;
     }
-    html += `<div class="p-proud">★ ${item.text}</div>`;
+    html += `<div class="ex-proud">★ ${item.text}</div>`;
   });
 
-  printContent('Stolz-Liste', html);
+  showExportPreview(html);
 }
 
 // --- Helpers ---
