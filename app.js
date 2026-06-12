@@ -56,19 +56,27 @@ function isTomorrow(d) {
   return dateKey(d) === dateKey(tomorrow);
 }
 
-function createTimeSelect(id) {
+function nearestQuarter() {
+  const now = new Date();
+  const m = Math.floor(now.getMinutes() / 15) * 15;
+  return `${String(now.getHours()).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function createTimeSelect(id, preselect) {
   const select = el('select', 'form-input time-input');
   select.id = id;
   const empty = el('option');
   empty.value = '';
   empty.textContent = '—';
   select.append(empty);
+  const defaultVal = preselect || '';
   for (let h = 0; h < 24; h++) {
     for (let m = 0; m < 60; m += 15) {
       const opt = el('option');
       const val = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
       opt.value = val;
       opt.textContent = val;
+      if (val === defaultVal) opt.selected = true;
       select.append(opt);
     }
   }
@@ -317,7 +325,7 @@ function renderAddForm() {
   row1.append(titleInput);
 
   const row2 = el('div', 'form-row');
-  const startInput = createTimeSelect('add-start');
+  const startInput = createTimeSelect('add-start', nearestQuarter());
   const bis = el('span');
   bis.textContent = '–';
   bis.style.cssText = 'display:flex;align-items:center;color:var(--text-light);font-size:16px;';
@@ -365,7 +373,7 @@ function renderAddReflectForm() {
   row1.append(titleInput);
 
   const row2 = el('div', 'form-row');
-  const startInput = createTimeSelect('add-reflect-start');
+  const startInput = createTimeSelect('add-reflect-start', nearestQuarter());
   const bis = el('span');
   bis.textContent = '–';
   bis.style.cssText = 'display:flex;align-items:center;color:var(--text-light);font-size:16px;';
