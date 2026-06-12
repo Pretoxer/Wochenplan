@@ -719,8 +719,10 @@ function showExportPreview(bodyHTML) {
   printBtn.className = 'print-pdf-btn';
   printBtn.onclick = () => {
     toolbar.style.display = 'none';
-    window.print();
-    toolbar.style.display = 'flex';
+    try {
+      window.print();
+    } catch(e) {}
+    setTimeout(() => { toolbar.style.display = 'flex'; }, 500);
   };
 
   toolbar.append(backBtn, printBtn);
