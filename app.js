@@ -731,6 +731,8 @@ function showExportPreview(bodyHTML) {
 
   overlay.append(toolbar, content);
   document.body.appendChild(overlay);
+  overlay.scrollTo(0, 0);
+  window.scrollTo(0, 0);
 }
 
 function exportWeekPDF(fromStr, toStr) {
