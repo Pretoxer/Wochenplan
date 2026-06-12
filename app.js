@@ -7,6 +7,14 @@ const DB = {
     try {
       return JSON.parse(localStorage.getItem('wochenplan_data')) || {};
     } catch { return {}; }
+  },
+  saveProud(list) {
+    localStorage.setItem('wochenplan_proud', JSON.stringify(list));
+  },
+  loadProud() {
+    try {
+      return JSON.parse(localStorage.getItem('wochenplan_proud')) || [];
+    } catch { return []; }
   }
 };
 
@@ -24,6 +32,7 @@ const WEEKDAYS_SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 // --- State ---
 let state = {
   plans: DB.load(),
+  proudList: DB.loadProud(),
   selectedDate: new Date(),
   view: 'day', // 'day', 'week'
   tab: 'plan'  // 'plan', 'reflect'
@@ -62,25 +71,22 @@ function nearestQuarter() {
   return `${String(now.getHours()).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-function createTimeSelect(id, preselect) {
-  const select = el('select', 'form-input time-input');
-  select.id = id;
-  const empty = el('option');
-  empty.value = '';
-  empty.textContent = '—';
-  select.append(empty);
-  const defaultVal = preselect || '';
-  for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += 15) {
-      const opt = el('option');
-      const val = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-      opt.value = val;
-      opt.textContent = val;
-      if (val === defaultVal) opt.selected = true;
-      select.append(opt);
-    }
-  }
-  return select;
+function roundTo15(timeStr) {
+  if (!timeStr) return '';
+  const [h, m] = timeStr.split(':').map(Number);
+  const rounded = Math.round(m / 15) * 15;
+  const finalH = rounded === 60 ? (h + 1) % 24 : h;
+  const finalM = rounded === 60 ? 0 : rounded;
+  return `${String(finalH).padStart(2, '0')}:${String(finalM).padStart(2, '0')}`;
+}
+
+function createTimeInput(id, defaultVal) {
+  const input = el('input', 'form-input time-input');
+  input.type = 'time';
+  input.id = id;
+  if (defaultVal) input.value = defaultVal;
+  input.onchange = () => { input.value = roundTo15(input.value); };
+  return input;
 }
 
 function formatDate(d) {
@@ -110,7 +116,10 @@ function render() {
   const app = document.getElementById('app');
   app.innerHTML = '';
 
-  if (state.view === 'week') {
+  if (state.view === 'proud') {
+    app.appendChild(renderHeader());
+    app.appendChild(renderProudView());
+  } else if (state.view === 'week') {
     app.appendChild(renderHeader());
     app.appendChild(renderWeekView());
   } else {
@@ -149,6 +158,12 @@ function renderDateNav() {
   else if (isTomorrow(state.selectedDate)) text += ' (Morgen)';
   label.textContent = text;
   if (isToday(state.selectedDate)) label.classList.add('today-marker');
+  if (!isToday(state.selectedDate)) {
+    label.style.cursor = 'pointer';
+    label.style.textDecoration = 'underline';
+    label.style.textDecorationColor = 'var(--accent)';
+    label.onclick = () => { state.selectedDate = new Date(); render(); };
+  }
 
   const next = el('button');
   next.innerHTML = '›';
@@ -325,11 +340,11 @@ function renderAddForm() {
   row1.append(titleInput);
 
   const row2 = el('div', 'form-row');
-  const startInput = createTimeSelect('add-start', nearestQuarter());
+  const startInput = createTimeInput('add-start', nearestQuarter());
   const bis = el('span');
   bis.textContent = '–';
   bis.style.cssText = 'display:flex;align-items:center;color:var(--text-light);font-size:16px;';
-  const endInput = createTimeSelect('add-end');
+  const endInput = createTimeInput('add-end');
   row2.append(startInput, bis, endInput);
 
   const addBtn = el('button', 'btn-add');
@@ -373,11 +388,11 @@ function renderAddReflectForm() {
   row1.append(titleInput);
 
   const row2 = el('div', 'form-row');
-  const startInput = createTimeSelect('add-reflect-start', nearestQuarter());
+  const startInput = createTimeInput('add-reflect-start', nearestQuarter());
   const bis = el('span');
   bis.textContent = '–';
   bis.style.cssText = 'display:flex;align-items:center;color:var(--text-light);font-size:16px;';
-  const endInput = createTimeSelect('add-reflect-end');
+  const endInput = createTimeInput('add-reflect-end');
   row2.append(startInput, bis, endInput);
 
   let selectedMood = null;
@@ -541,6 +556,69 @@ function renderWeekView() {
   return content;
 }
 
+function renderProudView() {
+  const content = el('div', 'content');
+
+  const addSection = el('div', 'add-form');
+  addSection.style.marginTop = '0';
+  const addCard = el('div', 'add-card');
+  const h3 = el('h3');
+  h3.textContent = 'Worauf bist du stolz?';
+  const row = el('div', 'form-row');
+  const input = el('input', 'form-input');
+  input.type = 'text';
+  input.placeholder = 'Ich bin stolz auf...';
+  input.id = 'proud-input';
+  row.append(input);
+  const addBtn = el('button', 'btn-add');
+  addBtn.textContent = 'Eintragen';
+  addBtn.onclick = () => {
+    const text = document.getElementById('proud-input').value.trim();
+    if (!text) return;
+    state.proudList.unshift({ id: uid(), text, date: dateKey(new Date()) });
+    DB.saveProud(state.proudList);
+    render();
+  };
+  addCard.append(h3, row, addBtn);
+  addSection.append(addCard);
+  content.append(addSection);
+
+  if (state.proudList.length === 0) {
+    content.appendChild(renderEmptyState('Noch keine Einträge', 'Schreibe oben auf, worauf du stolz bist.'));
+  } else {
+    const list = el('div', 'activity-list');
+    let lastDate = null;
+    state.proudList.forEach(item => {
+      if (item.date !== lastDate) {
+        lastDate = item.date;
+        const dateHeader = el('div', 'activity-time');
+        dateHeader.style.cssText = 'padding: 8px 0 2px; margin-top: 4px;';
+        const [y, m, d] = item.date.split('-');
+        const dt = new Date(y, m - 1, d);
+        dateHeader.textContent = formatDate(dt);
+        list.append(dateHeader);
+      }
+      const card = el('div', 'activity-card');
+      card.classList.add('completed');
+      const del = el('button', 'btn-delete');
+      del.innerHTML = '×';
+      del.onclick = (e) => {
+        e.stopPropagation();
+        state.proudList = state.proudList.filter(p => p.id !== item.id);
+        DB.saveProud(state.proudList);
+        render();
+      };
+      const title = el('div', 'activity-title');
+      title.textContent = item.text;
+      card.append(del, title);
+      list.append(card);
+    });
+    content.append(list);
+  }
+
+  return content;
+}
+
 function renderBottomNav() {
   const nav = el('div', 'bottom-nav');
 
@@ -554,16 +632,12 @@ function renderBottomNav() {
   weekBtn.innerHTML = '<span class="nav-icon">▦</span><span class="nav-label">Woche</span>';
   weekBtn.onclick = () => { state.view = 'week'; render(); };
 
-  const todayBtn = el('button', 'nav-btn');
-  todayBtn.innerHTML = '<span class="nav-icon">◎</span><span class="nav-label">Heute</span>';
-  todayBtn.onclick = () => {
-    state.selectedDate = new Date();
-    state.view = 'day';
-    state.tab = 'reflect';
-    render();
-  };
+  const proudBtn = el('button', 'nav-btn');
+  if (state.view === 'proud') proudBtn.classList.add('active');
+  proudBtn.innerHTML = '<span class="nav-icon">★</span><span class="nav-label">Stolz</span>';
+  proudBtn.onclick = () => { state.view = 'proud'; render(); };
 
-  nav.append(dayBtn, weekBtn, todayBtn);
+  nav.append(dayBtn, weekBtn, proudBtn);
   return nav;
 }
 

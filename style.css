@@ -303,13 +303,6 @@ input, textarea {
 .time-input {
   width: 90px;
   flex: none;
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-select.time-input {
-  background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238A8578'/%3E%3C/svg%3E") no-repeat right 10px center;
-  padding-right: 28px;
 }
 
 .btn-add {
